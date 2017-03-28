@@ -51,6 +51,7 @@
 - (NSTouchBarItem*)makeSliderForID:(NSString*)id withIdentifier:(NSString*)identifier;
 - (NSTouchBarItem*)makePopoverForID:(NSString*)id withIdentifier:(NSString*)identifier;
 - (NSTouchBarItem*)makeGroupForID:(NSString*)id withIdentifier:(NSString*)identifier;
+- (NSTouchBarItem*)makeScrollViewForID:(NSString*)id withIdentifier:(NSString*)identifier;
 
 // Helpers to update touch bar items
 - (void)updateButton:(NSCustomTouchBarItem*)item withSettings:(const mate::PersistentDictionary&)settings;
@@ -58,6 +59,7 @@
 - (void)updateColorPicker:(NSColorPickerTouchBarItem*)item withSettings:(const mate::PersistentDictionary&)settings;
 - (void)updateSlider:(NSSliderTouchBarItem*)item withSettings:(const mate::PersistentDictionary&)settings;
 - (void)updatePopover:(NSPopoverTouchBarItem*)item withSettings:(const mate::PersistentDictionary&)settings;
+- (void)updateScrollView:(NSCustomTouchBarItem*)item withSettings:(const mate::PersistentDictionary&)settings;
 
 @end
 

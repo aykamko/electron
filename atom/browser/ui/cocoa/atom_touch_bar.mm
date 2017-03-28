@@ -20,6 +20,7 @@ static NSTouchBarItemIdentifier PopoverIdentifier = @"com.electron.touchbar.popo
 static NSTouchBarItemIdentifier SliderIdentifier = @"com.electron.touchbar.slider.";
 static NSTouchBarItemIdentifier SegmentedControlIdentifier = @"com.electron.touchbar.segmentedcontrol.";
 static NSTouchBarItemIdentifier ScrubberIdentifier = @"com.electron.touchbar.scrubber.";
+static NSTouchBarItemIdentifier ScrollViewIdentifier = @"com.electron.touchbar.scrollview.";
 
 static NSString* const TextScrubberItemIdentifier = @"scrubber.text.item";
 static NSString* const ImageScrubberItemIdentifier = @"scrubber.image.item";
@@ -108,6 +109,9 @@ static NSString* const ImageScrubberItemIdentifier = @"scrubber.image.item";
   } else if ([identifier hasPrefix:ScrubberIdentifier]) {
     item_id = [self idFromIdentifier:identifier withPrefix:ScrubberIdentifier];
     return [self makeScrubberForID:item_id withIdentifier:identifier];
+  } else if ([identifier hasPrefix:ScrollViewIdentifier]) {
+    item_id = [self idFromIdentifier:identifier withPrefix:ScrollViewIdentifier];
+    return [self makeScrollViewForID:item_id withIdentifier:identifier];
   }
 
   return nil;
@@ -144,6 +148,8 @@ static NSString* const ImageScrubberItemIdentifier = @"scrubber.image.item";
     [self updateSegmentedControl:(NSCustomTouchBarItem*)item withSettings:settings];
   } else if (item_type == "scrubber") {
     [self updateScrubber:(NSCustomTouchBarItem*)item withSettings:settings];
+  } else if (item_type == "scrollview") {
+    [self updateScrollView:(NSCustomTouchBarItem*)item withSettings:settings];
   }
 
 }
@@ -221,6 +227,8 @@ static NSString* const ImageScrubberItemIdentifier = @"scrubber.image.item";
     base_identifier = SegmentedControlIdentifier;
   else if (type == "scrubber")
     base_identifier = ScrubberIdentifier;
+  else if (type == "scrollview")
+    base_identifier = ScrollViewIdentifier;
 
   if (base_identifier)
     return [NSString stringWithFormat:@"%@%s", base_identifier, item_id.data()];
@@ -604,6 +612,46 @@ static NSString* const ImageScrubberItemIdentifier = @"scrubber.image.item";
   }
 
   return itemView;
+}
+
+- (NSTouchBarItem*)makeScrollViewForID:(NSString*)id
+                        withIdentifier:(NSString*)identifier {
+  std::string s_id([id UTF8String]);
+  if (![self hasItemWithID:s_id]) return nil;
+
+  mate::PersistentDictionary settings = settings_[s_id];
+  base::scoped_nsobject<NSCustomTouchBarItem> item([[NSClassFromString(
+      @"NSCustomTouchBarItem") alloc] initWithIdentifier:identifier]);
+  NSView* scrollViewContainer = [[[NSView alloc] initWithFrame:NSZeroRect] autorelease];
+  NSScrollView* scrollview = [[[NSScrollView alloc] initWithFrame:NSZeroRect] autorelease];
+  [scrollViewContainer addSubview:scrollview];
+
+  scrollViewContainer.wantsLayer = YES;
+  scrollViewContainer.layer.backgroundColor = [NSColor blueColor].CGColor;
+  scrollview.wantsLayer = YES;
+  scrollview.layer.backgroundColor = [NSColor greenColor].CGColor;
+
+  [item setView:scrollViewContainer];
+  [self updateScrollView:item withSettings:settings];
+
+  return item.autorelease();
+}
+
+- (void)updateScrollView:(NSCustomTouchBarItem*)item
+            withSettings:(const mate::PersistentDictionary&)settings {
+  NSView *scrollViewContainer = (NSView*)item.view;
+  NSScrollView* scrollview = (NSScrollView*)scrollViewContainer.subviews[0];
+
+  mate::PersistentDictionary child;
+  std::vector<mate::PersistentDictionary> items;
+  if (settings.Get("child", &child) && child.Get("ordereredItems", &items)) {
+    NSMutableArray* identifiers = [self identifiersFromSettings:items];
+    NSTouchBar *subTouchbar = [self touchBarFromItemIdentifiers:identifiers];
+    for (NSTouchBarItemIdentifier ident in identifiers) {
+      NSView *view = [[subTouchbar itemForIdentifier:ident] view];
+      [scrollview addSubview:view];
+    }
+  }
 }
 
 @end
