@@ -622,16 +622,9 @@ static NSString* const ImageScrubberItemIdentifier = @"scrubber.image.item";
   mate::PersistentDictionary settings = settings_[s_id];
   base::scoped_nsobject<NSCustomTouchBarItem> item([[NSClassFromString(
       @"NSCustomTouchBarItem") alloc] initWithIdentifier:identifier]);
-  NSView* scrollViewContainer = [[[NSView alloc] initWithFrame:NSZeroRect] autorelease];
-  NSScrollView* scrollview = [[[NSScrollView alloc] initWithFrame:NSZeroRect] autorelease];
-  [scrollViewContainer addSubview:scrollview];
+  NSScrollView* scrollView = [[[NSScrollView alloc] initWithFrame:NSZeroRect] autorelease];
 
-  scrollViewContainer.wantsLayer = YES;
-  scrollViewContainer.layer.backgroundColor = [NSColor blueColor].CGColor;
-  scrollview.wantsLayer = YES;
-  scrollview.layer.backgroundColor = [NSColor greenColor].CGColor;
-
-  [item setView:scrollViewContainer];
+  [item setView:scrollView];
   [self updateScrollView:item withSettings:settings];
 
   return item.autorelease();
@@ -639,8 +632,13 @@ static NSString* const ImageScrubberItemIdentifier = @"scrubber.image.item";
 
 - (void)updateScrollView:(NSCustomTouchBarItem*)item
             withSettings:(const mate::PersistentDictionary&)settings {
-  NSView *scrollViewContainer = (NSView*)item.view;
-  NSScrollView* scrollview = (NSScrollView*)scrollViewContainer.subviews[0];
+  NSScrollView *scrollView = (NSScrollView*)item.view;
+  NSView *documentView = [[[NSView alloc] initWithFrame:NSZeroRect] autorelease];
+
+  NSMutableDictionary *constraintViews = [NSMutableDictionary dictionary];
+  int defaultSpacing = 8;
+  NSString *layoutFormat = @"H:|";
+  NSSize size = NSMakeSize(0, 30);
 
   mate::PersistentDictionary child;
   std::vector<mate::PersistentDictionary> items;
@@ -649,9 +647,30 @@ static NSString* const ImageScrubberItemIdentifier = @"scrubber.image.item";
     NSTouchBar *subTouchbar = [self touchBarFromItemIdentifiers:identifiers];
     for (NSTouchBarItemIdentifier ident in identifiers) {
       NSView *view = [[subTouchbar itemForIdentifier:ident] view];
-      [scrollview addSubview:view];
+      view.translatesAutoresizingMaskIntoConstraints = NO;
+      [documentView addSubview:view];
+
+      if (view == nil) {
+        continue;
+      }
+
+      NSString *key = [ident stringByReplacingOccurrencesOfString:@"." withString:@"_"];
+      layoutFormat = [layoutFormat stringByAppendingString:[
+        NSString stringWithFormat:@"[%@]-(%d)-", key, defaultSpacing]];
+      [constraintViews setObject:view forKey:key];
+
+      size.width += view.intrinsicContentSize.width + defaultSpacing;
     }
   }
+
+  layoutFormat = [layoutFormat stringByAppendingString:[NSString stringWithFormat:@"|"]];
+  NSArray *hConstraints = [NSLayoutConstraint constraintsWithVisualFormat:layoutFormat
+                                                                  options:NSLayoutFormatAlignAllCenterY
+                                                                  metrics:nil
+                                                                    views:constraintViews];
+  [documentView setFrame:NSMakeRect(0, 0, size.width, size.height)];
+  [NSLayoutConstraint activateConstraints:hConstraints];
+  scrollView.documentView = documentView;
 }
 
 @end
